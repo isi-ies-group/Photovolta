@@ -272,7 +272,7 @@ def admin():
     else:
         # El usuario no está autenticado, verificar la contraseña
         if request.method == 'POST':
-            password = request.form['password']
+            password = request.values['password']
             if password == admin_pass:
                 session['authenticated'] = True
                 return redirect(url_for('admin'))
@@ -340,7 +340,7 @@ def comment():
 
 
         if request.method == 'POST':
-            comment = request.form['comment'].strip() # Elimina los espacios en blanco al principio y al final del comentario
+            comment = request.values['comment'].strip() # Elimina los espacios en blanco al principio y al final del comentario
             if comment and not comment.isspace(): # Verifica si el comentario no está vacío y no consiste solo en espacios en blanco
                 now = datetime.now()
                 dt_string = now.strftime("%d/%m/%Y %H:%M") # Formatea la fecha y hora actual
@@ -378,16 +378,16 @@ def deleteComment():
 @app.route('/signup', methods=['GET', 'POST'])  #Permite registrarse al usuario
 def signup():
     if request.method == 'POST':
-        username = request.form['username'].lower()
-        email = request.form['email'].lower()
-        contraseña = request.form['password']
+        username = request.values['username'].lower()
+        email = request.values['email'].lower()
+        contraseña = request.values['password']
         error_message = None
 
         url_previa = request.referrer
         # Obtiene la url previa, sirve para diferencial si el usuario se registra con Google
     
         if url_previa == None:
-            pfp = request.form['pfp']
+            pfp = request.values['pfp']
         else:
             pfp = "userpfp/user-default.png"
 
@@ -418,7 +418,7 @@ def signup():
             return render_template('signup.html', error_message=error_message)
         else:
 
-            if contraseña == request.form['password_confirm']: # Si la contraseña es segura y se confirma adecuadamente
+            if contraseña == request.values['password_confirm']: # Si la contraseña es segura y se confirma adecuadamente
                 pass_encrypt=generate_password_hash(contraseña) # Se encripta la contraseña, para que no aparezca directamente en la BBDD
                 usuario = User(username,email,pass_encrypt,pfp)
                 db.session.add(usuario)
@@ -449,8 +449,8 @@ def login():
         return redirect('profile')
 
     if request.method == 'POST': # Si se rellena el formulario de inicio de sesion
-        username = request.form['username'].lower()
-        password = request.form['password']
+        username = request.values['username'].lower()
+        password = request.values['password']
 
         all_users = db.session.query(User).all()
 
@@ -532,11 +532,11 @@ def uploadData():
     if request.method == 'POST':
         email = user.email
 
-        fecha = request.form['fecha']
-        hora = request.form['hora']
+        fecha = request.values['fecha']
+        hora = request.values['hora']
 
-        latitud = round(float(request.form['latitude'].replace(",",".")),6)
-        longitud = round(float(request.form['longitude'].replace(",",".")),6)
+        latitud = round(float(request.values['latitude'].replace(",",".")),6)
+        longitud = round(float(request.values['longitude'].replace(",",".")),6)
 
         imagen = request.files['fotografia']
 
@@ -790,8 +790,7 @@ def get_google_oauth_token():
 
 @app.route('/addData', methods=['POST']) #Para enviar entradas via API con dispositivos registrados
 def addData():
-
-    id_sensor = request.form['id_sensor']
+    id_sensor = request.values['id_sensor']
 
     token = request.headers.get('token')
 
@@ -806,19 +805,19 @@ def addData():
         return "Error: Sensor no autenticado"
 
     # Obtiene los datos de la peticion
-    timestamp = request.form['timestamp']
+    timestamp = request.values['timestamp']
     fecha_objeto = datetime.fromisoformat(timestamp)
     timestamp = fecha_objeto.strftime("%Y-%m-%dT%H:%M:%S")
 
     #Cambio las , a . para evitar posibles problemas
-    latitud = request.form['latitud'].replace(",",".")
-    longitud = request.form['longitud'].replace(",",".")
+    latitud = request.values['latitud'].replace(",",".")
+    longitud = request.values['longitud'].replace(",",".")
 
     # Se comprueban algunos datos
-    orientacion = int(request.form['orientacion'])
+    orientacion = int(request.values['orientacion'])
     if orientacion >= 360: # 90 - Este, 180 - Sur, 270 - Oeste, 0 - Norte
         orientacion = orientacion-360
-    inclinacion = int(request.form['inclinacion'])
+    inclinacion = int(request.values['inclinacion'])
     if inclinacion > 180: #Por ejemplo
         inclinacion = inclinacion-180
     try:
@@ -830,7 +829,7 @@ def addData():
         return "Error: latitud y longitud deben ser números decimales con al menos 6 decimales"
 
 
-    tipo_medida = request.form['tipo_medida']
+    tipo_medida = request.values['tipo_medida']
     # Devuelve un mensaje de que se ha enviado bien el dato, indicando el tipo
     mensaje = f"Dato insertado correctamente tipo  -  {tipo_medida}"
     response = make_response(mensaje)
@@ -838,7 +837,6 @@ def addData():
 
     #Depeniendo de lo que se envie, es un  tipo u otro (visto en Postman)
     if request.content_type.startswith('multipart/form-data'): # Este es para los que contengan imganes
-
 
         valor = request.files['valor_medida']
         if not valor.filename:
@@ -856,21 +854,19 @@ def addData():
         db.session.commit()
 
 
-    #Dependiendo de lo que se envie, es un  tipo u otro (visto en Postman)
+    # Dependiendo de lo que se envie, es un  tipo u otro (visto en Postman)
     if request.content_type == 'application/x-www-form-urlencoded': # Si solo se envian caracteres
-        valor = float(request.form['valor_medida'].replace(",","."))
+        valor = float(request.values['valor_medida'].replace(",","."))
         if tipo_medida == "SVF":
             tipo_medida = tipo_medida.upper()
             if (valor) < 0 or (valor) > 1:
                 return "Error: SVF debe estar entre 0 y 1"
         elif tipo_medida == "irradiancia":
-            valor = float(request.form['valor_medida'].replace(",","."))
+            valor = float(request.values['valor_medida'].replace(",","."))
             cifras_significativas = 4
             #por ser float pone automaticamente el .0
             if len(str(valor).split('.', 1)[0])+len(str(valor).split('.', 1)[1]) < cifras_significativas:
                 return "valor_medida debe tener  4 cifras significativas"
-
-
 
         Dato = DatoSensor(id_sensor=id_sensor,timestamp=timestamp,latitud=latitud,longitud=longitud,orientacion=orientacion,inclinacion=inclinacion,tipo_medida=tipo_medida,valor=valor)
         db.session.add(Dato)
