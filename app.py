@@ -799,16 +799,19 @@ def addData():
     id_sensor = request.values['id_sensor']
 
     token = request.headers.get('token')
+    print('Token', token)
 
     # Se comprueba que el sensor esta registrado
     try:
         sensor = db.session.query(SensorAUT).filter_by(id_sensor=id_sensor).one()
     except NoResultFound:
+        print("Error: Sensor no autenticado")
         return "Error: Sensor no autenticado"
 
     # Comprueba si el token introducido es correcto
     if  check_password_hash(sensor.token, token) != 1:
-        return "Error: Sensor no autenticado"
+        print("Error: Token no correcto")
+        return "Error: Token no correcto"
 
     # Obtiene los datos de la peticion
     timestamp = request.values['timestamp']
@@ -816,8 +819,8 @@ def addData():
     timestamp = fecha_objeto.strftime("%Y-%m-%dT%H:%M:%S")
 
     #Cambio las , a . para evitar posibles problemas
-    latitud = request.values['latitud'].replace(",",".")
-    longitud = request.values['longitud'].replace(",",".")
+    latitud = request.values['latitud']#.replace(",",".")
+    longitud = request.values['longitud']#.replace(",",".")
 
     # Se comprueban algunos datos
     orientacion = int(request.values['orientacion'])
@@ -840,6 +843,8 @@ def addData():
     mensaje = f"Dato insertado correctamente tipo  -  {tipo_medida}"
     response = make_response(mensaje)
     response.status_code = 200
+    
+    print("Resp", response)
 
     #Depeniendo de lo que se envie, es un  tipo u otro (visto en Postman)
     if request.content_type.startswith('multipart/form-data'): # Este es para los que contengan imganes
@@ -862,7 +867,7 @@ def addData():
 
     # Dependiendo de lo que se envie, es un  tipo u otro (visto en Postman)
     if request.content_type == 'application/x-www-form-urlencoded': # Si solo se envian caracteres
-        valor = float(request.values['valor_medida'].replace(",","."))
+        valor = float(request.values['valor_medida'])#.replace(",","."))
         if tipo_medida == "SVF":
             tipo_medida = tipo_medida.upper()
             if (valor) < 0 or (valor) > 1:
