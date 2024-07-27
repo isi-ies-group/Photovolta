@@ -790,6 +790,12 @@ def get_google_oauth_token():
 
 @app.route('/addData', methods=['POST']) #Para enviar entradas via API con dispositivos registrados
 def addData():
+
+    if 'okhttp' in request.headers['User-Agent']:
+        a = json.loads(list(request.form.keys())[0])
+        print('Request de Android con Retrofit', request.form)
+        request.values = a
+    
     id_sensor = request.values['id_sensor']
 
     token = request.headers.get('token')
